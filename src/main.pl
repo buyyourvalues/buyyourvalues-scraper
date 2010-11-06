@@ -23,10 +23,30 @@ use warnings;
 
 use Scraper;
 
+sub usage
+{
+    print << "FINI";
+Usage:
+
+    $0 [datafile]
+
+FINI
+}
+
 sub main
 {
-    my $scraper = Scraper->new;
-    $scraper->work;
+    if (my $file_name = $ARGV[0])
+    {
+        my $scraper = Scraper->new;
+        $scraper->work(
+            file_name => $file_name,
+        );
+    }
+    else
+    {
+        usage;
+    }
+
 }
 
 main;
