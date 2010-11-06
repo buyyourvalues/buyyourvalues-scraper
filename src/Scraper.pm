@@ -21,6 +21,7 @@ use warnings;
 package Scraper;
 
 use base 'Object';
+use DBI;
 use FileHandle;
 use LWP::Simple;
 
@@ -32,6 +33,7 @@ sub work
 
     if (my $fh = FileHandle->new("< $file_name"))
     {
+        my @results;
         for ($fh->getlines)
         {
             if (my $id_obj = $this->get_id($_))
@@ -41,26 +43,59 @@ sub work
                     if (my $content = $this->get_url($url))
                     {
                         my $owner = $this->extract_name_and_premise($content);
-                        print << "FINI";
-Id:      $id_obj->{id}
-Type:    $id_obj->{type}
-Address: $id_obj->{address}
-State:   $id_obj->{state}
-City:    $id_obj->{city}
-Zip:     $id_obj->{zip}
-Name:    $owner->{principal_name}
-Premise: $id_obj->{premise}
-
-FINI
+						push @results, {
+							id      => $id_obj->{id},
+							type    => $id_obj->{type},
+							address => $id_obj->{address},
+							state   => $id_obj->{state},
+							city    => $id_obj->{city},
+							zip     => $id_obj->{zip},
+							name    => $owner->{principal_name},
+							premise => $id_obj->{premise},
+						};
                     }
                 }
             }
+        }
+
+        if (@results)
+        {
+            $this->write_data(@results);
         }
     }
     else
     {
         die "Problem reading $file_name: $!";
     }
+}
+
+sub write_data
+{
+    my ($this, @data) = @_;
+
+    my $dbh = DBI->connect('dbi::SQLite:dbname=../data/data.db', '', '', {
+            AutoCommit => 0,
+            PrintError => 1,
+        }
+    );
+
+    my $sth = $dbh->prepare('insert into results_from_website (id, name, premise, type, address, city, state, zip) values (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+
+    while (@data)
+    {
+        $sth->execute(
+            $_->{id},
+            $_->{name},
+            $_->{premise},
+            $_->{type},
+            $_->{address},
+            $_->{city},
+            $_->{state},
+            $_->{zip},
+        );
+    }
+
+    $dbh->commit;
 }
 
 sub extract_name_and_premise
