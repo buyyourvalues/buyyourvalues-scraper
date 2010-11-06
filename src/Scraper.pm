@@ -21,13 +21,138 @@ use warnings;
 package Scraper;
 
 use base 'Object';
+use FileHandle;
+use LWP::Simple;
 
 sub work
 {
-    my ($this) = @_;
+    my ($this, %args) = @_;
 
-    print "Hello, world!\n";
+    my $file_name = $args{'file_name'};
 
+    if (my $fh = FileHandle->new("< $file_name"))
+    {
+        for ($fh->getlines)
+        {
+            if (my $id_obj = $this->get_id($_))
+            {
+                if (my $url = $this->generate_url($id_obj))
+                {
+                    if (my $content = $this->get_url($url))
+                    {
+                        my $owner = $this->extract_name_and_premise($content);
+                        print << "FINI";
+Id:      $id_obj->{id}
+Type:    $id_obj->{type}
+Address: $id_obj->{address}
+State:   $id_obj->{state}
+City:    $id_obj->{city}
+Zip:     $id_obj->{zip}
+Name:    $owner->{principal_name}
+Premise: $id_obj->{premise}
+
+FINI
+                    }
+                }
+            }
+        }
+    }
+    else
+    {
+        die "Problem reading $file_name: $!";
+    }
+}
+
+sub extract_name_and_premise
+{
+    my ($this, $content) = @_;
+
+    my $principal_name;
+    my $principal_found = 0;
+    my $principal_name_found = 0;
+
+    my $seen_principals_name = 0;
+
+    for (split /\r\n|\n|\r/, $content)
+    {
+        if (m@Principal's Name:@i)
+        {
+            $principal_found = 1;
+            next;
+        }
+        if ($principal_found and !$principal_name_found)
+        {
+            $principal_name .= $_;
+
+            if (m@</td>@)
+            {
+                $principal_name_found = 1;
+                last;
+            }
+        }
+    }
+
+    $principal_name = $this->cleanup($principal_name);
+
+    return {
+        principal_name => $principal_name,
+    };
+}
+
+sub cleanup
+{
+    my ($this, $string) = @_;
+
+    $string =~ s/\r\n|\n|\r/\n/g;
+
+    $string =~ s@<[^>]+?>@@g;
+
+    $string =~ s/^\s*//g;
+    $string =~ s/\s*$//g;
+
+    return $string;
+}
+
+sub generate_url
+{
+    my ($this, $id_obj) = @_;
+
+    my $base_url = "http://www.trans.abc.state.ny.us/servlet/ApplicationServlet?pageName=com.ibm.nysla.data.publicquery.PublicQuerySuccessfulResultsPage&validated=true&serialNumber=$id_obj->{id}&licenseType=$id_obj->{type}";
+
+    return $base_url;
+}
+
+sub get_id
+{
+    my ($this, $line) = @_;
+
+    if ($line =~ /^\d{7}/)
+    {
+        my ($id, undef, $type, undef, $premise, $address, $city, $state, $zip) = split /\t+/, $line;
+
+        $zip =~ s/\r\n|\n|\r//g;
+
+		my $id_obj = {
+			id      => $id,
+			type    => $type,
+			address => $address,
+			city    => $city,
+			state   => $state,
+			zip     => $zip,
+			premise => $premise,
+		};
+
+        return $id_obj;
+    }
+}
+
+sub get_url
+{
+    my ($this, $url) = @_;
+
+    my $content = get($url);
+
+    return $content;
 }
 
 1;
