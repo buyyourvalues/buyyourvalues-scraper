@@ -43,16 +43,16 @@ sub work
                     if (my $content = $this->get_url($url))
                     {
                         my $owner = $this->extract_name_and_premise($content);
-						push @results, {
-							id      => $id_obj->{id},
-							type    => $id_obj->{type},
-							address => $id_obj->{address},
-							state   => $id_obj->{state},
-							city    => $id_obj->{city},
-							zip     => $id_obj->{zip},
-							name    => $owner->{principal_name},
-							premise => $id_obj->{premise},
-						};
+			push @results, {
+				id      => $id_obj->{id},
+				type    => $id_obj->{type},
+				address => $id_obj->{address},
+				state   => $id_obj->{state},
+				city    => $id_obj->{city},
+				zip     => $id_obj->{zip},
+				name    => $owner->{principal_name},
+				premise => $id_obj->{premise},
+			};
                     }
                 }
             }
@@ -184,9 +184,7 @@ sub get_id
 sub get_url
 {
     my ($this, $url) = @_;
-
     my $content = get($url);
-
     return $content;
 }
 
