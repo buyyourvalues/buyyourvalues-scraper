@@ -167,15 +167,15 @@ sub get_id
 
         $zip =~ s/\r\n|\n|\r//g;
 
-		my $id_obj = {
-			id      => $id,
-			type    => $type,
-			address => $address,
-			city    => $city,
-			state   => $state,
-			zip     => $zip,
-			premise => $premise,
-		};
+	my $id_obj = {
+		id      => $id,
+		type    => $type,
+		address => $address,
+		city    => $city,
+		state   => $state,
+		zip     => $zip,
+		premise => $premise,
+	};
 
         return $id_obj;
     }
